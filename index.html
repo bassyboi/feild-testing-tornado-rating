@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tornado Danger Rating Calculator</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 2rem;
+      background-color: #f0f8ff;
+      line-height: 1.6;
+    }
+    .container {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 10px;
+      max-width: 800px;
+      margin: auto;
+      box-shadow: 0px 0px 15px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+      text-align: center;
+      color: #333;
+    }
+    h3 {
+      color: #444;
+    }
+    label {
+      display: block;
+      margin-top: 1.2rem;
+      color: #333;
+    }
+    input[type="number"] {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    button {
+      display: block;
+      width: 100%;
+      padding: 0.8rem;
+      background: #007acc;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 1.5rem;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #005fa3;
+    }
+    .result {
+      margin-top: 1.5rem;
+      padding: 1.2rem;
+      background: #e9f5ff;
+      border: 1px solid #b3d7ff;
+      border-radius: 8px;
+    }
+    .formula {
+      background: #eef;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-family: monospace;
+      display: inline-block;
+      margin: 0.2rem 0;
+    }
+    .info, .field-info {
+      background: #fff8dc;
+      padding: 1rem;
+      border: 1px solid #f4e1a1;
+      border-radius: 8px;
+      margin-top: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Tornado Danger Rating Calculator</h1>
+    
+    <!-- General Information -->
+    <div class="info">
+      <h2>About This Tool</h2>
+      <p>
+        This calculator estimates a tornado danger rating (0–10) based on three key field observations:
+      </p>
+      <ul>
+        <li>
+          <strong>CAPE (J/kg):</strong> The energy available for storm development. More energy means more potential for strong updrafts.
+        </li>
+        <li>
+          <strong>Bulk Wind Shear (s⁻¹):</strong> How quickly winds speed up with height. Greater shear helps storms develop rotation.
+        </li>
+        <li>
+          <strong>Storm Tilt Angle (°):</strong> The observed tilt of the storm. A stronger tilt often indicates a developing mesocyclone (rotating updraft).
+        </li>
+      </ul>
+      <p>
+        Supercells are organized storms with rotating updrafts (mesocyclones) and are more likely to produce tornadoes. In contrast, "popcorn" (or pulse) storms are scattered and short-lived with little rotation.
+      </p>
+      <p>
+        Enter the values you observe in the field and click the "Calculate Tornado Danger Rating" button. The resulting score will give you a quick indication of tornado potential:
+      </p>
+      <ul>
+        <li><strong>0–3:</strong> Low tornado risk</li>
+        <li><strong>4–6:</strong> Moderate tornado risk</li>
+        <li><strong>7–10:</strong> High tornado risk</li>
+      </ul>
+    </div>
+    
+    <!-- Field Testing Inputs -->
+    <h2>Inputs</h2>
+    <label for="cape">CAPE (J/kg):</label>
+    <input type="number" id="cape" placeholder="Enter CAPE (J/kg)" step="any" />
+
+    <label for="shear">Bulk Wind Shear (s⁻¹):</label>
+    <input type="number" id="shear" placeholder="Enter shear in s⁻¹" step="any" />
+
+    <label for="tilt">Storm Tilt Angle (degrees):</label>
+    <input type="number" id="tilt" placeholder="Enter storm tilt (°)" step="any" />
+
+    <div class="field-info">
+      <h3>How to Measure in the Field</h3>
+      <p>
+        <strong>CAPE:</strong> Often estimated using weather balloon (radiosonde) data or local observations.
+      </p>
+      <p>
+        <strong>Shear:</strong> Measured between low and mid-levels (e.g., near the surface and at 6000 m) using mobile weather equipment.
+      </p>
+      <p>
+        <strong>Tilt Angle:</strong> Can be visually estimated or determined by radar analysis of the storm’s structure.
+      </p>
+    </div>
+    
+    <button id="calcButton">Calculate Tornado Danger Rating</button>
+    
+    <!-- Results Section -->
+    <div id="result" class="result" style="display:none;">
+      <h2>Results</h2>
+      <p><strong>Tornado Danger Rating:</strong> <span id="rating"></span> / 10</p>
+      <p id="ratingExplanation"></p>
+      <p id="details"></p>
+      <p class="formula">Formula used: Rating = (0.4 × CAPE_score + 0.4 × Shear_score + 0.2 × Tilt_score) × 10</p>
+      <p>
+        Where:
+        <br>— CAPE_score = min(CAPE/2000, 1)
+        <br>— Shear_score = min(Shear/0.03, 1)
+        <br>— Tilt_score = min(Tilt/40, 1)
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // The scoring logic:
+    // Normalize inputs:
+    //   CAPE_score = min(CAPE/2000, 1)
+    //   Shear_score = min(shear/0.03, 1)  (0.03 s⁻¹ is a typical threshold for organized supercells)
+    //   Tilt_score = min(tilt/40, 1)        (40° tilt or more is considered strong)
+    // Then, tornado danger rating = (0.4 * CAPE_score + 0.4 * Shear_score + 0.2 * Tilt_score) × 10.
+    
+    document.getElementById("calcButton").addEventListener("click", function() {
+      const cape = parseFloat(document.getElementById("cape").value);
+      const shear = parseFloat(document.getElementById("shear").value);
+      const tilt = parseFloat(document.getElementById("tilt").value);
+      
+      if (isNaN(cape) || cape < 0 || isNaN(shear) || shear < 0 || isNaN(tilt) || tilt < 0) {
+        alert("Please enter non-negative numerical values for all inputs.");
+        return;
+      }
+      
+      // Calculate normalized scores (max of 1)
+      const capeScore = Math.min(cape / 2000, 1);   // 2000 J/kg => 1
+      const shearScore = Math.min(shear / 0.03, 1);   // 0.03 s⁻¹ => 1
+      const tiltScore = Math.min(tilt / 40, 1);       // 40° tilt => 1
+      
+      // Calculate tornado danger rating
+      const rating = (0.4 * capeScore + 0.4 * shearScore + 0.2 * tiltScore) * 10;
+      const ratingRounded = Math.round(rating * 10) / 10; // round to one decimal place
+      
+      // Provide a plain language interpretation
+      let explanation = "";
+      if (ratingRounded < 3) {
+        explanation = "Low Tornado Risk: The energy and wind shear are too low for significant tornado development.";
+      } else if (ratingRounded < 7) {
+        explanation = "Moderate Tornado Risk: Some ingredients are present, so tornado formation is possible.";
+      } else {
+        explanation = "High Tornado Risk: Conditions are very favorable for strong, rotating supercells capable of producing tornadoes.";
+      }
+      
+      // Display detailed normalized scores
+      const details = "<strong>Detail Scores:</strong><br>" +
+                      "Normalized CAPE Score: " + capeScore.toFixed(2) + "<br>" +
+                      "Normalized Shear Score: " + shearScore.toFixed(2) + "<br>" +
+                      "Normalized Tilt Score: " + tiltScore.toFixed(2);
+      
+      document.getElementById("rating").textContent = ratingRounded;
+      document.getElementById("ratingExplanation").textContent = explanation;
+      document.getElementById("details").innerHTML = details;
+      
+      document.getElementById("result").style.display = "block";
+    });
+  </script>
+</body>
+</html>
