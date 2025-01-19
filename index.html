@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Effective Wind (Knots) vs Tilt Angle</title>
+  <title>Effective Wind (Knots) vs Tilt Angle (Up to 7000 CAPE)</title>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Chart.js Annotation Plugin -->
@@ -50,25 +50,28 @@
       <h2>Overview</h2>
       <p>
         This chart shows how the <strong>effective advective wind</strong> 
-        <em>(\(U_\mathrm{eff}\))</em> changes with <strong>tilt angle</strong> 
-        for various <strong>CAPE</strong> values.
+        (<em>U<sub>eff</sub></em>) changes with <strong>tilt angle</strong> 
+        for various <strong>CAPE</strong> values up to <strong>7000 J/kg</strong>.
       </p>
       <p>
-        We calculate:
-        <br>
-        <em>Updraft speed:</em> \( w = \sqrt{2 \times \mathrm{CAPE}} \) (m/s)
-        <br>
-        <em>Effective wind:</em> \( U_\mathrm{eff} = w \times \tan(\theta) \) (m/s),
-        converted to <strong>knots</strong>.
+        <em>Updraft speed</em>: 
+        <code>w = √(2 &times; CAPE)</code> (m/s)
+        <br/>
+        <em>Effective wind</em>: 
+        <code>U<sub>eff</sub> = w &times; tan(θ)</code> (m/s)
+        <br/>
+        Both are converted to <strong>knots</strong> (1 m/s &approx; 1.94384 knots).
       </p>
       <p>
-        The shaded region between <strong>10°</strong> and <strong>20°</strong> 
-        is considered a <em>"danger zone"</em> for tornado development.
+        The red-shaded region marks a <em>“danger zone”</em> between 
+        <strong>10&deg;</strong> and <strong>20&deg;</strong> of tilt, 
+        historically associated with a higher risk of tornado formation.
       </p>
     </div>
 
     <div class="note">
-      CAPE values plotted: 0, 1000, 2000, 3000, 4000 J/kg. Tilt angle from 0° to 30°.
+      CAPE values: 0, 1000, 2000, 3000, 4000, 5000, 6000, 7000 J/kg.<br/>
+      Tilt angle: 0&deg; to 30&deg;.
     </div>
 
     <div class="chart-container">
@@ -80,8 +83,8 @@
     // ------------------------------------------
     // Constants & Conversions
     // ------------------------------------------
-    const KNOTS_PER_M_S = 1.94384; // 1 m/s ≈ 1.94384 knots
-    const CAPE_VALUES = [0, 1000, 2000, 3000, 4000]; // J/kg
+    const KNOTS_PER_M_S = 1.94384;    // 1 m/s ≈ 1.94384 knots
+    const CAPE_VALUES = [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000];
     const TILT_MIN = 0;     // degrees
     const TILT_MAX = 30;    // degrees
     const TILT_STEP = 1;    // step in degrees
@@ -109,7 +112,7 @@
     // Prepare Data for Chart.js
     // ------------------------------------------
     // We'll create multiple datasets (one for each CAPE),
-    // each showing U_eff in knots vs tilt angle.
+    // each plotting U_eff (knots) vs tilt angle.
     const labels = [];
     for (let t = TILT_MIN; t <= TILT_MAX; t += TILT_STEP) {
       labels.push(t);
@@ -121,21 +124,23 @@
         label: `CAPE = ${cape} J/kg`,
         data: dataPoints,
         fill: false,
-        borderColor: getRandomColor(index),
+        borderColor: getColor(index),
         borderWidth: 2
       };
     });
 
-    // A simple helper function to generate distinct colors
-    function getRandomColor(i) {
+    // A simple helper function to pick distinct colors
+    function getColor(i) {
       const colorList = [
         'rgba(255, 99, 132, 1)',  // pinkish red
         'rgba(54, 162, 235, 1)',  // blue
         'rgba(255, 206, 86, 1)',  // yellow
         'rgba(75, 192, 192, 1)',  // teal
-        'rgba(153, 102, 255, 1)'  // purple
+        'rgba(153, 102, 255, 1)', // purple
+        'rgba(255, 159, 64, 1)',  // orange
+        'rgba(199, 72, 83, 1)',   // darker red
+        'rgba(100, 181, 246, 1)'  // lighter blue
       ];
-      // cycle through colors
       return colorList[i % colorList.length];
     }
 
@@ -173,7 +178,7 @@
                   xMin: 10,
                   xMax: 20,
                   yMin: 0,
-                  yMax: 'max',    // shade all the way to the top
+                  yMax: 'max', // shade up to top of graph
                   backgroundColor: 'rgba(255, 0, 0, 0.1)',
                   borderWidth: 0
                 }
