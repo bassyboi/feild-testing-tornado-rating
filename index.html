@@ -2,327 +2,186 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Supercell Wind Shear Chart (15° & 16° Tilt)</title>
-  <!-- Chart.js CDN (for the line chart) -->
+  <title>Effective Wind (Knots) vs Tilt Angle</title>
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Chart.js Annotation Plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
   <style>
     body {
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      font-family: Arial, sans-serif;
       margin: 2rem;
       background-color: #f0f8ff;
-      line-height: 1.6;
     }
     .container {
+      max-width: 900px;
+      margin: 0 auto;
       background: #fff;
       padding: 2rem;
-      border-radius: 10px;
-      max-width: 900px;
-      margin: auto;
-      box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
     }
     h1, h2 {
       text-align: center;
       color: #333;
     }
     .info {
-      background: #fff8dc;
-      padding: 1rem;
+      background-color: #fff8dc;
       border: 1px solid #f4e1a1;
-      border-radius: 8px;
+      border-radius: 6px;
+      padding: 1rem;
       margin-bottom: 1rem;
+    }
+    .chart-container {
+      margin-top: 2rem;
     }
     .note {
       font-style: italic;
       color: #555;
       margin-bottom: 1rem;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 0.75rem;
-      text-align: center;
-    }
-    th {
-      background-color: #007acc;
-      color: #fff;
-    }
-    .danger {
-      font-weight: bold;
-      color: #c00;
-    }
-    .chart-container {
-      margin-top: 3rem;
-    }
   </style>
 </head>
+
 <body>
   <div class="container">
-    <h1>Supercell Wind Shear Chart</h1>
+    <h1>Supercell Effective Wind vs Tilt Angle</h1>
     <div class="info">
-      <h2>About This Chart</h2>
+      <h2>Overview</h2>
       <p>
-        This enhanced chart focuses on tilt angles <strong>15°</strong> and 
-        <strong>16°</strong>, which are known to be in the higher danger zone 
-        for tornadoes (with 16° famously cited in discussions of the Moore tornado).
+        This chart shows how the <strong>effective advective wind</strong> 
+        <em>(\(U_\mathrm{eff}\))</em> changes with <strong>tilt angle</strong> 
+        for various <strong>CAPE</strong> values.
       </p>
       <p>
-        The calculations assume a default storm “height” 
-        (vertical separation) of <strong>6000 m</strong>. 
-        <br/><br/>
-        <strong>Updraft speed</strong>: 
-        <span class="formula">w = √(2 × CAPE)</span> (m/s)
-        <br/>
-        Converted to knots (1 knot ≈ 1.94384 m/s).
-        <br/><br/>
-        <strong>Effective advective wind</strong>:
-        <span class="formula">U<sub>eff</sub> = w × tan(θ)</span>
-        <br/>
-        Also displayed in knots.
-        <br/><br/>
-        <strong>Bulk shear</strong>:
-        <span class="formula">S = (2 × U<sub>eff</sub>) / Δz</span> (s⁻¹)
-        <br/>
-        Where Δz = 6000 m.
+        We calculate:
+        <br>
+        <em>Updraft speed:</em> \( w = \sqrt{2 \times \mathrm{CAPE}} \) (m/s)
+        <br>
+        <em>Effective wind:</em> \( U_\mathrm{eff} = w \times \tan(\theta) \) (m/s),
+        converted to <strong>knots</strong>.
       </p>
       <p>
-        <strong>Danger Rating</strong>: 
-        If tilt ∈ [15°, 16°], we label it as <em>“High Danger”</em>. 
+        The shaded region between <strong>10°</strong> and <strong>20°</strong> 
+        is considered a <em>"danger zone"</em> for tornado development.
       </p>
     </div>
 
-    <h2>Data Table (0–4000 CAPE, step=500)</h2>
-    <p class="note">
-      Each row shows updraft speed (<em>w</em>), effective wind (<em>U<sub>eff</sub></em>) 
-      in knots, and resulting shear (s⁻¹) for both 15° and 16° tilts.
-    </p>
-    
-    <table id="shearTable">
-      <thead>
-        <tr>
-          <th rowspan="2">CAPE<br>(J/kg)</th>
-          <th rowspan="2">Updraft<br> w (knots)</th>
-          <th colspan="3">Tilt = 15°</th>
-          <th colspan="3">Tilt = 16°</th>
-        </tr>
-        <tr>
-          <th>U<sub>eff</sub> (knots)</th>
-          <th>Shear (s⁻¹)</th>
-          <th>Danger</th>
-          <th>U<sub>eff</sub> (knots)</th>
-          <th>Shear (s⁻¹)</th>
-          <th>Danger</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Rows inserted via JavaScript -->
-      </tbody>
-    </table>
+    <div class="note">
+      CAPE values plotted: 0, 1000, 2000, 3000, 4000 J/kg. Tilt angle from 0° to 30°.
+    </div>
 
-    <!-- Chart Container -->
     <div class="chart-container">
-      <canvas id="shearChart" width="800" height="400"></canvas>
+      <canvas id="tiltChart" width="800" height="400"></canvas>
     </div>
   </div>
 
   <script>
-    // --------------------------
+    // ------------------------------------------
     // Constants & Conversions
-    // --------------------------
-    const deltaZ = 6000;         // m
-    const KNOTS_PER_M_S = 1.94384; // 1 m/s = ~1.94384 knots
+    // ------------------------------------------
+    const KNOTS_PER_M_S = 1.94384; // 1 m/s ≈ 1.94384 knots
+    const CAPE_VALUES = [0, 1000, 2000, 3000, 4000]; // J/kg
+    const TILT_MIN = 0;     // degrees
+    const TILT_MAX = 30;    // degrees
+    const TILT_STEP = 1;    // step in degrees
 
-    // --------------------------
+    // ------------------------------------------
     // Calculation Functions
-    // --------------------------
-
-    // 1) Updraft speed (m/s)
+    // ------------------------------------------
     function calcUpdraftSpeed(cape) {
-      // w (m/s) = sqrt(2 * CAPE)
-      // CAPE is in J/kg => same units as m^2 / s^2
+      // w (m/s) = sqrt(2 × CAPE)
       return Math.sqrt(2 * cape);
     }
 
-    // 2) Effective advective wind (m/s)
-    function calcUeff(w_m_s, tiltDeg) {
+    function calcUeffKnots(cape, tiltDeg) {
+      // w in m/s
+      const w_m_s = calcUpdraftSpeed(cape);
+      // tilt angle in radians
       const tiltRad = tiltDeg * (Math.PI / 180);
-      return w_m_s * Math.tan(tiltRad);
+      // U_eff in m/s
+      const Ueff_m_s = w_m_s * Math.tan(tiltRad);
+      // convert to knots
+      return Ueff_m_s * KNOTS_PER_M_S;
     }
 
-    // 3) Bulk shear in s^-1
-    function calcShear(Ueff_m_s) {
-      return (2 * Ueff_m_s) / deltaZ; 
+    // ------------------------------------------
+    // Prepare Data for Chart.js
+    // ------------------------------------------
+    // We'll create multiple datasets (one for each CAPE),
+    // each showing U_eff in knots vs tilt angle.
+    const labels = [];
+    for (let t = TILT_MIN; t <= TILT_MAX; t += TILT_STEP) {
+      labels.push(t);
     }
 
-    // 4) Convert m/s to knots
-    function mpsToKnots(speed_m_s) {
-      return speed_m_s * KNOTS_PER_M_S;
+    const datasets = CAPE_VALUES.map((cape, index) => {
+      const dataPoints = labels.map(tilt => calcUeffKnots(cape, tilt));
+      return {
+        label: `CAPE = ${cape} J/kg`,
+        data: dataPoints,
+        fill: false,
+        borderColor: getRandomColor(index),
+        borderWidth: 2
+      };
+    });
+
+    // A simple helper function to generate distinct colors
+    function getRandomColor(i) {
+      const colorList = [
+        'rgba(255, 99, 132, 1)',  // pinkish red
+        'rgba(54, 162, 235, 1)',  // blue
+        'rgba(255, 206, 86, 1)',  // yellow
+        'rgba(75, 192, 192, 1)',  // teal
+        'rgba(153, 102, 255, 1)'  // purple
+      ];
+      // cycle through colors
+      return colorList[i % colorList.length];
     }
 
-    // --------------------------
-    // Table Generation
-    // --------------------------
-    function generateTable() {
-      const tbody = document.querySelector("#shearTable tbody");
-      tbody.innerHTML = "";
-
-      // CAPE range: 0 to 4000 in increments of 500
-      const capeValues = [];
-      for (let c = 0; c <= 4000; c += 500) {
-        capeValues.push(c);
-      }
-
-      capeValues.forEach(cape => {
-        // Calculate updraft speed in m/s
-        const w_m_s = calcUpdraftSpeed(cape);
-        // Convert to knots
-        const w_knots = mpsToKnots(w_m_s);
-
-        // For 15° tilt
-        const Ueff15_m_s = calcUeff(w_m_s, 15);
-        const Ueff15_knots = mpsToKnots(Ueff15_m_s);
-        const shear15 = calcShear(Ueff15_m_s);
-        const danger15 = "High Danger"; // Because 15° is in [15°,16°]
-
-        // For 16° tilt
-        const Ueff16_m_s = calcUeff(w_m_s, 16);
-        const Ueff16_knots = mpsToKnots(Ueff16_m_s);
-        const shear16 = calcShear(Ueff16_m_s);
-        const danger16 = "High Danger"; // Because 16° is in [15°,16°]
-
-        // Build row
-        const row = document.createElement("tr");
-
-        // CAPE
-        const capeCell = document.createElement("td");
-        capeCell.textContent = cape;
-        row.appendChild(capeCell);
-
-        // w (knots)
-        const wCell = document.createElement("td");
-        wCell.textContent = w_knots.toFixed(2);
-        row.appendChild(wCell);
-
-        // Ueff(15)
-        const U15Cell = document.createElement("td");
-        U15Cell.textContent = Ueff15_knots.toFixed(2);
-        row.appendChild(U15Cell);
-
-        // Shear(15)
-        const shear15Cell = document.createElement("td");
-        shear15Cell.textContent = shear15.toFixed(4);
-        row.appendChild(shear15Cell);
-
-        // Danger(15)
-        const danger15Cell = document.createElement("td");
-        danger15Cell.textContent = danger15;
-        danger15Cell.classList.add("danger");
-        row.appendChild(danger15Cell);
-
-        // Ueff(16)
-        const U16Cell = document.createElement("td");
-        U16Cell.textContent = Ueff16_knots.toFixed(2);
-        row.appendChild(U16Cell);
-
-        // Shear(16)
-        const shear16Cell = document.createElement("td");
-        shear16Cell.textContent = shear16.toFixed(4);
-        row.appendChild(shear16Cell);
-
-        // Danger(16)
-        const danger16Cell = document.createElement("td");
-        danger16Cell.textContent = danger16;
-        danger16Cell.classList.add("danger");
-        row.appendChild(danger16Cell);
-
-        tbody.appendChild(row);
-      });
-    }
-
-    // --------------------------
-    // Chart Generation
-    // --------------------------
-    function generateChart() {
-      const ctx = document.getElementById("shearChart").getContext("2d");
-
-      // We’ll plot shear vs CAPE for both 15° and 16°.
-      const capeData = [];
-      const shear15Data = [];
-      const shear16Data = [];
-
-      for (let cape = 0; cape <= 4000; cape += 500) {
-        const w_m_s = calcUpdraftSpeed(cape);
-        
-        const Ueff15 = calcUeff(w_m_s, 15);
-        const S15 = calcShear(Ueff15);
-
-        const Ueff16 = calcUeff(w_m_s, 16);
-        const S16 = calcShear(Ueff16);
-
-        capeData.push(cape);
-        shear15Data.push(S15);
-        shear16Data.push(S16);
-      }
-
+    // ------------------------------------------
+    // Initialize Chart
+    // ------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      const ctx = document.getElementById('tiltChart').getContext('2d');
+      
       new Chart(ctx, {
         type: 'line',
         data: {
-          labels: capeData,
-          datasets: [
-            {
-              label: 'Shear @15° (s⁻¹)',
-              data: shear15Data,
-              borderColor: 'rgba(255, 99, 132, 1)',
-              backgroundColor: 'rgba(255, 99, 132, 0.2)',
-              borderWidth: 2,
-              fill: true,
-            },
-            {
-              label: 'Shear @16° (s⁻¹)',
-              data: shear16Data,
-              borderColor: 'rgba(54, 162, 235, 1)',
-              backgroundColor: 'rgba(54, 162, 235, 0.2)',
-              borderWidth: 2,
-              fill: true,
-            }
-          ]
+          labels: labels,
+          datasets: datasets
         },
         options: {
           responsive: true,
           scales: {
             x: {
-              title: {
-                display: true,
-                text: 'CAPE (J/kg)'
-              }
+              title: { display: true, text: 'Tilt Angle (°)' },
+              min: TILT_MIN,
+              max: TILT_MAX
             },
             y: {
-              title: {
-                display: true,
-                text: 'Shear (s⁻¹)'
-              },
+              title: { display: true, text: 'Effective Wind (knots)' },
               beginAtZero: true
             }
           },
           plugins: {
-            legend: {
-              display: true
+            legend: { display: true },
+            annotation: {
+              annotations: {
+                dangerZone: {
+                  type: 'box',
+                  xMin: 10,
+                  xMax: 20,
+                  yMin: 0,
+                  yMax: 'max',    // shade all the way to the top
+                  backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                  borderWidth: 0
+                }
+              }
             }
           }
         }
       });
-    }
-
-    // --------------------------
-    // Main
-    // --------------------------
-    window.addEventListener("DOMContentLoaded", () => {
-      generateTable();
-      generateChart();
     });
   </script>
 </body>
